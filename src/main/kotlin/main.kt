@@ -51,11 +51,21 @@ fun main(): Unit = runBlocking {
     val process = ProcessBuilder("docker", "run", "-i", "--rm", "mcp/fetch")
         .redirectErrorStream(true)
         .start()
-    val mcpToolRegistry = McpToolRegistryProvider.fromProcess(process = process)
+    val fetchMcpToolRegistry = McpToolRegistryProvider.fromProcess(process = process)
 
-    val tools = toolRegistry + mcpToolRegistry
+    val vaadinMcpToolRegistry = McpToolRegistryProvider.fromProcess(process =
+        ProcessBuilder("npx", "@pyroprompts/mcp-stdio-to-streamable-http-adapter")
+            .apply {
+                environment().apply {
+                    set("URI", "https://mcp.vaadin.com/docs")
+                    set("MCP_NAME", "vaadin")
+                }
+            }
+            .start()
+    )
 
-    // Create the runner
+    val tools = toolRegistry + fetchMcpToolRegistry + vaadinMcpToolRegistry
+
     val agent = AIAgent(
         promptExecutor = executor,
         systemPrompt = "You are a helpful assistant. Answer user questions concisely.",
@@ -63,6 +73,6 @@ fun main(): Unit = runBlocking {
         toolRegistry = tools
     )
 
-    val answer = agent.run("Fetch https://anadea.info page in md format")
+    val answer = agent.run("How do I implement a button in Vaadin 25 using Java?")
     println("Answer: $answer")
 }
